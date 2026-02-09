@@ -42,6 +42,7 @@ function sanitizeSvg(svgString: string): string {
 
   return domPurifyInstance.sanitize(svgString, {
     USE_PROFILES: { svg: true, svgFilters: true },
+    ADD_DATA_URI_TAGS: ["image"],
   });
 }
 
@@ -103,20 +104,19 @@ export default function EditorPage() {
 
   const commitSvg = useCallback(
     (nextSvg: string) => {
-      const sanitized = sanitizeSvg(nextSvg);
       setHistory((prev) => {
-        if (prev.present === sanitized) {
+        if (prev.present === nextSvg) {
           return prev;
         }
         return {
           past: [...prev.past, prev.present],
-          present: sanitized,
+          present: nextSvg,
           future: [],
         };
       });
 
       setSelectedPlaceholderId((current) =>
-        current && extractPlaceholderIds(sanitized).includes(current) ? current : null,
+        current && extractPlaceholderIds(nextSvg).includes(current) ? current : null,
       );
     },
     [],
@@ -238,7 +238,7 @@ export default function EditorPage() {
   }, []);
 
   const onCanvasClick = useCallback((event: MouseEvent<HTMLDivElement>) => {
-    const target = event.target as HTMLElement | null;
+    const target = event.target as Element | null;
     const placeholder = target?.closest("[id^='img:']");
     if (!placeholder) {
       return;
