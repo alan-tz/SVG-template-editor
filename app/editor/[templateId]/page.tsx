@@ -46,15 +46,16 @@ function sanitizeSvg(svgString: string): string {
 }
 
 function extractPlaceholderIds(svgString: string): string[] {
-  if (typeof window === "undefined") {
-    return [];
+  const ids = new Set<string>();
+  const regex = /\sid=(["'])(img:[^"'<>]+)\1/g;
+  let match = regex.exec(svgString);
+
+  while (match) {
+    ids.add(match[2]);
+    match = regex.exec(svgString);
   }
 
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(svgString, "image/svg+xml");
-  return Array.from(doc.querySelectorAll("[id^='img:']"))
-    .map((el) => el.getAttribute("id"))
-    .filter((id): id is string => Boolean(id));
+  return Array.from(ids);
 }
 
 function parseSvgDimensions(svgString: string): { width: number; height: number } {
