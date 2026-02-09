@@ -16,7 +16,7 @@ const DEFAULT_SVG = `<svg width="1200" height="630" viewBox="0 0 1200 630" fill=
   </g>
   <defs>
     <pattern id="patternHero" patternUnits="objectBoundingBox" width="1" height="1">
-      <image href="https://dummyimage.com/920x940/d9dde7/8c94a9.png&text=img:hero" width="920" height="940" preserveAspectRatio="xMidYMid slice"/>
+      <image href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHdpZHRoPSc5MjAnIGhlaWdodD0nOTQwJyB2aWV3Qm94PScwIDAgOTIwIDk0MCc+PHJlY3Qgd2lkdGg9JzkyMCcgaGVpZ2h0PSc5NDAnIGZpbGw9JyNkOWRkZTcnLz48dGV4dCB4PSc1MCUnIHk9JzUwJScgZG9taW5hbnQtYmFzZWxpbmU9J21pZGRsZScgdGV4dC1hbmNob3I9J21pZGRsZScgZm9udC1zaXplPSc2NCcgZm9udC1mYW1pbHk9J0FyaWFsLCBzYW5zLXNlcmlmJyBmaWxsPScjOGM5NGE5Jz5pbWc6aGVybzwvdGV4dD48L3N2Zz4=" width="920" height="940" preserveAspectRatio="xMidYMid slice"/>
     </pattern>
   </defs>
   <text x="580" y="190" font-size="58" font-family="Arial, sans-serif" fill="#101828">SVG Template Editor</text>
@@ -83,6 +83,22 @@ function parseSvgDimensions(svgString: string): { width: number; height: number 
   }
 
   return { width, height };
+}
+
+function hasExternalImageReference(svgString: string): boolean {
+  const hrefRegex = /<image\b[^>]*(?:href|xlink:href)=(["'])([^"']+)\1/gi;
+  let match = hrefRegex.exec(svgString);
+
+  while (match) {
+    const href = match[2].trim().toLowerCase();
+    const isEmbedded = href.startsWith("data:") || href.startsWith("blob:");
+    if (!isEmbedded) {
+      return true;
+    }
+    match = hrefRegex.exec(svgString);
+  }
+
+  return false;
 }
 
 function extractBackgroundColor(svgString: string): string {
@@ -366,6 +382,13 @@ export default function EditorPage() {
 
   const exportRaster = useCallback(
     async (type: "image/png" | "image/jpeg") => {
+      if (hasExternalImageReference(history.present)) {
+        setStatus(
+          "PNG/JPG export blocked: SVG still references external images. Replace them with local or Drive images first.",
+        );
+        return;
+      }
+
       const { width, height } = parseSvgDimensions(history.present);
       const blob = new Blob([history.present], { type: "image/svg+xml" });
       const svgUrl = URL.createObjectURL(blob);
@@ -394,6 +417,9 @@ export default function EditorPage() {
         link.href = dataUrl;
         link.download = type === "image/png" ? "template.png" : "template.jpg";
         link.click();
+        setStatus(type === "image/png" ? "PNG exported." : "JPG exported.");
+      } catch (error) {
+        setStatus(error instanceof Error ? error.message : "Raster export failed.");
       } finally {
         URL.revokeObjectURL(svgUrl);
       }
