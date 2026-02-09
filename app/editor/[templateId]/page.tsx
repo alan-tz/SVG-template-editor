@@ -29,6 +29,12 @@ type HistoryState = {
   future: string[];
 };
 
+type TextEntry = {
+  key: string;
+  label: string;
+  value: string;
+};
+
 let domPurifyInstance: ReturnType<typeof createDOMPurify> | null = null;
 
 function sanitizeSvg(svgString: string): string {
@@ -79,6 +85,82 @@ function parseSvgDimensions(svgString: string): { width: number; height: number 
   return { width, height };
 }
 
+function extractBackgroundColor(svgString: string): string {
+  const match = svgString.match(/<rect\b[^>]*\sfill=(["'])(#[0-9a-fA-F]{3,8})\1/i);
+  return match?.[2] ?? "#f4f7fb";
+}
+
+function extractTextEntries(svgString: string): TextEntry[] {
+  const entries: TextEntry[] = [];
+  const regex = /<text\b[^>]*>([\s\S]*?)<\/text>/gi;
+  let match = regex.exec(svgString);
+  let index = 0;
+
+  while (match) {
+    const value = match[1].replace(/\s+/g, " ").trim();
+    entries.push({
+      key: `text:${index}`,
+      label: `Text ${index + 1}`,
+      value,
+    });
+    index += 1;
+    match = regex.exec(svgString);
+  }
+
+  return entries;
+}
+
+function updateTextInSvg(svgString: string, key: string, nextText: string): string {
+  if (typeof window === "undefined") {
+    return svgString;
+  }
+
+  const match = key.match(/^text:(\d+)$/);
+  if (!match) {
+    return svgString;
+  }
+
+  const targetIndex = Number(match[1]);
+  const parser = new DOMParser();
+  const xmlDoc = parser.parseFromString(svgString, "image/svg+xml");
+  const textNodes = Array.from(xmlDoc.querySelectorAll("text"));
+  const target = textNodes[targetIndex];
+  if (!target) {
+    return svgString;
+  }
+
+  target.textContent = nextText;
+  return new XMLSerializer().serializeToString(xmlDoc);
+}
+
+function updateBackgroundColorInSvg(svgString: string, color: string): string {
+  if (typeof window === "undefined") {
+    return svgString;
+  }
+
+  const parser = new DOMParser();
+  const xmlDoc = parser.parseFromString(svgString, "image/svg+xml");
+  const root = xmlDoc.documentElement;
+  const rootWidth = root.getAttribute("width");
+  const rootHeight = root.getAttribute("height");
+  const rects = Array.from(xmlDoc.querySelectorAll("rect"));
+  const targetRect =
+    rects.find(
+      (rect) =>
+        (!rootWidth || rect.getAttribute("width") === rootWidth) &&
+        (!rootHeight || rect.getAttribute("height") === rootHeight) &&
+        !rect.getAttribute("x") &&
+        !rect.getAttribute("y"),
+    ) ?? rects[0];
+
+  if (!targetRect) {
+    return svgString;
+  }
+
+  targetRect.setAttribute("fill", color);
+  return new XMLSerializer().serializeToString(xmlDoc);
+}
+
 export default function EditorPage() {
   const [history, setHistory] = useState<HistoryState>({
     past: [],
@@ -92,6 +174,8 @@ export default function EditorPage() {
 
   const sanitizedSvg = useMemo(() => sanitizeSvg(history.present), [history.present]);
   const placeholderIds = useMemo(() => extractPlaceholderIds(history.present), [history.present]);
+  const textEntries = useMemo(() => extractTextEntries(history.present), [history.present]);
+  const backgroundColor = useMemo(() => extractBackgroundColor(history.present), [history.present]);
 
   useEffect(() => {
     if (!status) {
@@ -253,6 +337,23 @@ export default function EditorPage() {
     setStatus(`Selected ${id}`);
   }, []);
 
+  const onTextChange = useCallback(
+    (key: string, value: string) => {
+      const updated = updateTextInSvg(history.present, key, value);
+      commitSvg(updated);
+    },
+    [commitSvg, history.present],
+  );
+
+  const onBackgroundColorChange = useCallback(
+    (value: string) => {
+      const updated = updateBackgroundColorInSvg(history.present, value);
+      commitSvg(updated);
+      setStatus("Background updated.");
+    },
+    [commitSvg, history.present],
+  );
+
   const exportSvg = useCallback(() => {
     const blob = new Blob([history.present], { type: "image/svg+xml" });
     const url = URL.createObjectURL(blob);
@@ -304,6 +405,12 @@ export default function EditorPage() {
     <main className="editor-layout">
       <Sidebar
         selectedPlaceholderId={selectedPlaceholderId}
+        placeholderIds={placeholderIds}
+        onSelectPlaceholder={setSelectedPlaceholderId}
+        backgroundColor={backgroundColor}
+        onBackgroundColorChange={onBackgroundColorChange}
+        textEntries={textEntries}
+        onTextChange={onTextChange}
         googleBusy={googleBusy}
         onGooglePick={onGooglePick}
         onLocalPick={onLocalPick}

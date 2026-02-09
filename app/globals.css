@@ -62,6 +62,14 @@ input {
   background: #fff;
 }
 
+.sidebar select,
+.sidebar input[type="text"] {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px;
+  background: #fff;
+}
+
 .sidebar button,
 .toolbar button {
   border: 1px solid var(--border);
@@ -89,6 +97,14 @@ input {
 
 .history-actions {
   flex-direction: row;
+}
+
+.text-edit-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--muted);
 }
 
 .canvas-panel {

@@ -2,6 +2,12 @@
 
 type SidebarProps = {
   selectedPlaceholderId: string | null;
+  placeholderIds: string[];
+  onSelectPlaceholder: (id: string | null) => void;
+  backgroundColor: string;
+  onBackgroundColorChange: (value: string) => void;
+  textEntries: Array<{ key: string; label: string; value: string }>;
+  onTextChange: (key: string, value: string) => void;
   googleBusy: boolean;
   onGooglePick: () => void;
   onLocalPick: (file: File) => void;
@@ -14,6 +20,12 @@ type SidebarProps = {
 export function Sidebar(props: SidebarProps) {
   const {
     selectedPlaceholderId,
+    placeholderIds,
+    onSelectPlaceholder,
+    backgroundColor,
+    onBackgroundColorChange,
+    textEntries,
+    onTextChange,
     googleBusy,
     onGooglePick,
     onLocalPick,
@@ -26,6 +38,48 @@ export function Sidebar(props: SidebarProps) {
   return (
     <aside className="sidebar">
       <h2 className="sidebar-title">Assets</h2>
+
+      <div className="sidebar-section">
+        <h3 className="sidebar-subtitle">Placeholder</h3>
+        <select
+          value={selectedPlaceholderId ?? ""}
+          onChange={(event) => onSelectPlaceholder(event.target.value || null)}
+        >
+          <option value="">None selected</option>
+          {placeholderIds.map((id) => (
+            <option key={id} value={id}>
+              {id}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="sidebar-section">
+        <h3 className="sidebar-subtitle">Background</h3>
+        <input
+          type="color"
+          value={backgroundColor}
+          onChange={(event) => onBackgroundColorChange(event.target.value)}
+        />
+      </div>
+
+      <div className="sidebar-section">
+        <h3 className="sidebar-subtitle">Text</h3>
+        {textEntries.length === 0 ? (
+          <p className="sidebar-helper">No editable text found in SVG.</p>
+        ) : (
+          textEntries.map((entry) => (
+            <label key={entry.key} className="text-edit-row">
+              {entry.label}
+              <input
+                type="text"
+                value={entry.value}
+                onChange={(event) => onTextChange(entry.key, event.target.value)}
+              />
+            </label>
+          ))
+        )}
+      </div>
 
       <div className="sidebar-section">
         <label className="file-upload-label" htmlFor="local-image-upload">
