@@ -1,36 +1,52 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SVG Template Editor
 
-## Getting Started
+A Next.js App Router SVG editor with image placeholder replacement, undo/redo, and Google Drive Picker support.
 
-First, run the development server:
+## Run locally
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open `http://localhost:3000/editor/default`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Google Drive Picker setup
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Create a Google Cloud project.
+2. Enable both APIs:
+- Google Picker API
+- Google Drive API
+3. Create an OAuth Client ID (`Web application`) and set authorized JavaScript origins (for example `http://localhost:3000` and your production domain).
+4. Create an API key (restrict it to the above APIs if possible).
+5. Add these environment variables in `.env.local`:
 
-## Learn More
+```bash
+NEXT_PUBLIC_GOOGLE_CLIENT_ID=...
+NEXT_PUBLIC_GOOGLE_API_KEY=...
+NEXT_PUBLIC_GOOGLE_APP_ID=...
+```
 
-To learn more about Next.js, take a look at the following resources:
+`NEXT_PUBLIC_GOOGLE_APP_ID` is your Google Cloud project number used by Picker.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+6. Drive Picker sign-in scope used by this app:
+- `https://www.googleapis.com/auth/drive.readonly`
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Usage
 
-## Deploy on Vercel
+- Click an SVG element/group with id prefix `img:` to select an image placeholder.
+- In `Assets`, use:
+- `Upload from Computer`, or
+- `Choose from Google Drive`
+- Picked files are downloaded from Drive and embedded as `data:` URLs. The app never hotlinks Drive URLs inside the SVG.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+If no `img:*` placeholder is selected and you choose an SVG file, the app imports it as the current canvas.
+If no placeholder is selected and you choose PNG/JPG, the app shows `Select an image placeholder first.`.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Notes
+
+- Tokens are kept in memory only and are not stored in `localStorage`.
+- SVG display is sanitized with DOMPurify.
+- Image replacement supports:
+- direct `<image>` nodes
+- Figma-style pattern fills in `<defs>` referenced via `url(#patternId)`
