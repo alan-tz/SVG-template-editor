@@ -1,6 +1,6 @@
 "use client";
 
-import DOMPurify from "dompurify";
+import createDOMPurify from "dompurify";
 import { useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
 
 import { Sidebar } from "@/src/components/Sidebar";
@@ -29,13 +29,27 @@ type HistoryState = {
   future: string[];
 };
 
+let domPurifyInstance: ReturnType<typeof createDOMPurify> | null = null;
+
 function sanitizeSvg(svgString: string): string {
-  return DOMPurify.sanitize(svgString, {
+  if (typeof window === "undefined") {
+    return svgString;
+  }
+
+  if (!domPurifyInstance) {
+    domPurifyInstance = createDOMPurify(window);
+  }
+
+  return domPurifyInstance.sanitize(svgString, {
     USE_PROFILES: { svg: true, svgFilters: true },
   });
 }
 
 function extractPlaceholderIds(svgString: string): string[] {
+  if (typeof window === "undefined") {
+    return [];
+  }
+
   const parser = new DOMParser();
   const doc = parser.parseFromString(svgString, "image/svg+xml");
   return Array.from(doc.querySelectorAll("[id^='img:']"))
@@ -44,6 +58,10 @@ function extractPlaceholderIds(svgString: string): string[] {
 }
 
 function parseSvgDimensions(svgString: string): { width: number; height: number } {
+  if (typeof window === "undefined") {
+    return { width: 1200, height: 630 };
+  }
+
   const parser = new DOMParser();
   const doc = parser.parseFromString(svgString, "image/svg+xml");
   const root = doc.documentElement;
