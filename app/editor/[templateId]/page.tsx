@@ -189,6 +189,7 @@ export default function EditorPage() {
   const { chooseFile, isBusy: googleBusy } = useGooglePicker();
 
   const sanitizedSvg = useMemo(() => sanitizeSvg(history.present), [history.present]);
+  const canvasDimensions = useMemo(() => parseSvgDimensions(history.present), [history.present]);
   const placeholderIds = useMemo(() => extractPlaceholderIds(history.present), [history.present]);
   const textEntries = useMemo(() => extractTextEntries(history.present), [history.present]);
   const backgroundColor = useMemo(() => extractBackgroundColor(history.present), [history.present]);
@@ -465,7 +466,11 @@ export default function EditorPage() {
         </header>
 
         <div className="canvas-shell" onClick={onCanvasClick}>
-          <div className="svg-canvas" dangerouslySetInnerHTML={{ __html: sanitizedSvg }} />
+          <div
+            className="svg-canvas"
+            style={{ width: `${canvasDimensions.width}px`, height: `${canvasDimensions.height}px` }}
+            dangerouslySetInnerHTML={{ __html: sanitizedSvg }}
+          />
         </div>
       </section>
 
